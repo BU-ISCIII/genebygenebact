@@ -5,27 +5,39 @@
     "description": "Gene-by-gene outbreaks analysis pipeline using cgMLST schemas.",
     "type": "object",
     "definitions": {
-        "input_output_options": {
-            "title": "Input/output options",
+        "input_options": {
+            "title": "Input options",
             "type": "object",
-            "fa_icon": "fas fa-terminal",
-            "description": "Define where the pipeline should find input data and save output data.",
-            "required": [
-                "input"
-            ],
+            "description": "",
+            "default": "",
             "properties": {
                 "input": {
                     "type": "string",
                     "fa_icon": "fas fa-dna",
-                    "description": "Input FastQ files.",
+                    "description": "Comma-separated file containing information about the samples in the experiment.",
                     "help_text": "Use this to specify the location of your input FastQ files. For example:\n\n```bash\n--input 'path/to/data/sample_*_{1,2}.fastq'\n```\n\nPlease note the following requirements:\n\n1. The path must be enclosed in quotes\n2. The path must have at least one `*` wildcard character\n3. When using the pipeline with paired end data, the path must use `{1,2}` notation to specify read pairs.\n\nIf left unspecified, a default pattern is used: `data/*{1,2}.fastq.gz`"
                 },
-                "single_end": {
-                    "type": "boolean",
-                    "description": "Specifies that the input is single-end reads.",
-                    "fa_icon": "fas fa-align-center",
-                    "help_text": "By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--single_end` on the command line when you launch the pipeline. A normal glob pattern, enclosed in quotation marks, can then be used for `--input`. For example:\n\n```bash\n--single_end --input '*.fastq'\n```\n\nIt is not possible to run a mixture of single-end and paired-end files in one run."
+                "schema": {
+                    "type": "string"
                 },
+                "fastq_samples_format": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "fasta_samples_format": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "input"
+            ]
+        },
+        "output_options": {
+            "title": "Output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should save output data.",
+            "properties": {
                 "outdir": {
                     "type": "string",
                     "description": "The output directory where the results will be saved.",
@@ -58,6 +70,12 @@
                     "fa_icon": "fas fa-font",
                     "description": "Path to FASTA genome file.",
                     "help_text": "If you have no genome reference available, the pipeline can build one using a FASTA file. This requires additional time and resources, so it's better to use a pre-build index if possible."
+                },
+                "gff": {
+                    "type": "string"
+                },
+                "save_reference": {
+                    "type": "boolean"
                 },
                 "igenomes_base": {
                     "type": "string",
@@ -252,11 +270,265 @@
                     "fa_icon": "fas fa-users-cog"
                 }
             }
+        },
+        "sra_download_options": {
+            "title": "SRA download options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "save_sra_fastq": {
+                    "type": "boolean"
+                },
+                "skip_sra_download": {
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        },
+        "ncbi_assembly_download_options": {
+            "title": "NCBI assembly download options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "save_ncbi_assembly_fasta": {
+                    "type": "boolean"
+                },
+                "skip_ncbi_assembly_download": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "schema_and_profile_download_options": {
+            "title": "Schema and profile download options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "api": {
+                    "type": "string"
+                },
+                "organism_id": {
+                    "type": "integer"
+                },
+                "schema_database": {
+                    "type": "integer"
+                },
+                "schema_type": {
+                    "type": "string"
+                },
+                "skip_get_schema": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "skip_get_profile": {
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        },
+        "quality_control_options": {
+            "title": "Quality Control options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "skip_fastqc": {
+                    "type": "boolean"
+                },
+                "skip_multiqc": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "read_trimming_options": {
+            "title": "Read trimming options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "cut_mean_quality": {
+                    "type": "integer",
+                    "default": 30
+                },
+                "qualified_quality_phred": {
+                    "type": "integer",
+                    "default": 30
+                },
+                "unqualified_percent_limit": {
+                    "type": "integer",
+                    "default": 10
+                },
+                "min_trimming_length": {
+                    "type": "integer",
+                    "default": 50
+                },
+                "skip_fastp_trimming": {
+                    "type": "boolean"
+                },
+                "save_trimmed": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "de_novo_assembly_options": {
+            "title": "De novo assembly options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "skip_unicycler_assembly": {
+                    "type": "boolean"
+                },
+                "skip_quast": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "taranis_analyze_schema_options": {
+            "title": "Taranis analyze schema options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "remove_subsets": {
+                    "type": "boolean"
+                },
+                "remove_duplicates": {
+                    "type": "boolean"
+                },
+                "remove_nocds": {
+                    "type": "boolean"
+                },
+                "new_schema": {
+                    "type": "boolean"
+                },
+                "skip_taranis_analyze_schema": {
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        },
+        "taranis_reference_alleles_options": {
+            "title": "Taranis reference alleles options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "evalue_ref": {
+                    "type": "number",
+                    "default": 0.001
+                },
+                "perc_identity_ref": {
+                    "type": "integer",
+                    "default": 90
+                },
+                "reward_ref": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "penalty_ref": {
+                    "type": "integer",
+                    "default": -2
+                },
+                "gap_open_ref": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "gap_extend_ref": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "num_threads_ref": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "skip_taranis_reference_alleles": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "taranis_allele_calling_options": {
+            "title": "Taranis allele calling options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "reference_alleles": {
+                    "type": "string"
+                },
+                "percentlength": {
+                    "type": "string",
+                    "default": "SD"
+                },
+                "coverage": {
+                    "type": "integer",
+                    "default": 50
+                },
+                "evalue_call": {
+                    "type": "number",
+                    "default": 0.001
+                },
+                "perc_identity_ref_call": {
+                    "type": "integer",
+                    "default": 90
+                },
+                "perc_identity_loc_call": {
+                    "type": "integer",
+                    "default": 90
+                },
+                "reward_call": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "penalty_call": {
+                    "type": "integer",
+                    "default": -2
+                },
+                "gapopen_call": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "gapextend_call": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "max_target_seqs_call": {
+                    "type": "integer",
+                    "default": 10
+                },
+                "max_hsps_call": {
+                    "type": "integer",
+                    "default": 10
+                },
+                "num_threads_call": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "flanking_nts": {
+                    "type": "integer",
+                    "default": 100
+                },
+                "update_schema": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "st_profile": {
+                    "type": "string"
+                },
+                "skip_taranis_allele_calling": {
+                    "type": "boolean"
+                }
+            }
         }
     },
     "allOf": [
         {
-            "$ref": "#/definitions/input_output_options"
+            "$ref": "#/definitions/input_options"
+        },
+        {
+            "$ref": "#/definitions/output_options"
         },
         {
             "$ref": "#/definitions/reference_genome_options"
@@ -269,6 +541,33 @@
         },
         {
             "$ref": "#/definitions/institutional_config_options"
+        },
+        {
+            "$ref": "#/definitions/sra_download_options"
+        },
+        {
+            "$ref": "#/definitions/ncbi_assembly_download_options"
+        },
+        {
+            "$ref": "#/definitions/schema_and_profile_download_options"
+        },
+        {
+            "$ref": "#/definitions/quality_control_options"
+        },
+        {
+            "$ref": "#/definitions/read_trimming_options"
+        },
+        {
+            "$ref": "#/definitions/de_novo_assembly_options"
+        },
+        {
+            "$ref": "#/definitions/taranis_analyze_schema_options"
+        },
+        {
+            "$ref": "#/definitions/taranis_reference_alleles_options"
+        },
+        {
+            "$ref": "#/definitions/taranis_allele_calling_options"
         }
     ]
 }

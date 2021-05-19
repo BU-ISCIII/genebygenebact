@@ -1,15 +1,28 @@
-# You can use this file to create a conda environment for this pipeline:
-#   conda env create -f environment.yml
 name: nf-core-genebygenebact-1.0dev
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - conda-forge::python=3.7.3
-  - conda-forge::markdown=3.1.1
-  - conda-forge::pymdown-extensions=6.0
-  - conda-forge::pygments=2.5.2
-  # TODO nf-core: Add required software dependencies here
-  - bioconda::fastqc=0.11.8
-  - bioconda::multiqc=1.7
+  - pip
+  - python>=3.6 ## tiene que ser menor a 3.8 porque si no biopython no funciona
+  - bioconda::fastqc=0.11.9 # viralrecon v
+  - bioconda::fastp=0.20.1 # viralrecon v
+  - bioconda::unicycler=0.4.7 # viralrecon v
+  - bioconda::bandage=0.8.1 # viralrecon v
+  - bioconda::quast=5.0.2
+  - bioconda::multiqc=1.9 # viralrecon v
+  - bioconda::blast=2.5
+  - bioconda::mash=1.1
+  - bioconda::prodigal
+  - bioconda::prokka  #(se me ha isntalado 1.12)
+
+  - pip:
+    - biopython==1.72
+    - pandas
+    - progressbar
+    - openpyxl
+    - plotly
+    - numpy
+    - requests
+    - entrez-direct==13.9
