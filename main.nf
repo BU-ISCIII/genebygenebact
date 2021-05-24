@@ -500,34 +500,48 @@ process CHECK_SAMPLESHEET {
 
     if $params.fasta_samples_format
     then
-        awk -F, '{if(\$4 != "") {print \$0}}' $samplesheet > nonncbi_id.csv
-        if [ -s nonncbi_id.csv ]
+
+        awk -F, 'NR>1 {if(\$4 != "") {print \$0}}' $samplesheet > nonncbi_id_samples.csv
+        if [ -s nonncbi_id_samples.csv ]
         then
-            check_samplesheet.py -FILE_IN nonncbi_id.csv
+            head -n 1 $samplesheet > nonncbi_id.csv
+            cat nonncbi_id_samples.csv >> nonncbi_id.csv
+            rm nonncbi_id_samples.csv
+            check_samplesheet.py -FILE_IN nonncbi_id.csv -FILE_OUT nonncbi.samplesheet.csv
         fi
 
-        awk -F, '{if(\$1 == GCA* || \$1 == GCF* && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id.list
 
-        if [ -f nonncbi_id.csv ]
+        awk -F, 'NR>1 {if(\$1 ~ /^GCA/ || \$1 ~ /^GCT/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id_samples.csv
+
+        if [ -s ncbi_id_samples.csv ]
         then
-            head -n 1 nonncbi_id.csv > samplesheet.valid_fasta.csv
+            awk -F, 'BEGIN {OFS=","; print "sample,is_id,fasta"} {\$2="1";\$3="0";print \$0}' ncbi_id_samples.csv > ncbi.samplesheet.csv
+            rm ncbi_id_samples.csv
+        fi
+
+
+        if [ -f nonncbi.samplesheet.csv ]
+        then
+            head -n 1 nonncbi.samplesheet.csv > samplesheet.valid_fasta.csv
         else
-            head -n 1 ncbi_id.csv > samplesheet.valid_fasta.csv
+            head -n 1 ncbi.samplesheet.csv > samplesheet.valid_fasta.csv
         fi
-        tail -n +2 -q *ncbi_id.csv >> samplesheet.valid_fasta.csv
+        tail -n +2 -q *ncbi.samplesheet.csv >> samplesheet.valid_fasta.csv
 
     fi
 
 
     if $params.fastq_samples_format
     then
-        awk -F, '{if(\$1 != "" && \$2 != "" && \$4 == "" ) {print \$0}}' $samplesheet > nonsra_id.csv
+        awk -F, '{if( \$1 != "" && \$2 != "" && \$4 == "" || \$4 == "fasta") {print \$0}}' $samplesheet > nonsra_id.csv
+
         if [ -s nonsra_id.csv ]
         then
             check_samplesheet.py -FILE_IN nonsra_id.csv -FILE_OUT nonsra.samplesheet.csv
         fi
 
-        awk -F, '{if(\$1 != "" && \$1 != GCA* && \$1 != GCF* && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > sra_id.list
+        awk -F, '{if(\$1 !~ /^GCA/ && \$1 !~ /^GCT/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "" || \$4 == "fasta") {print \$1}}' $samplesheet > sra_id.list
+
         if $run_sra && [ -s sra_id.list ]
         then
             fetch_sra_runinfo.py sra_id.list sra_run_info.tsv --platform ILLUMINA --library_layout SINGLE,PAIRED
@@ -545,6 +559,10 @@ process CHECK_SAMPLESHEET {
 
     """
 }
+
+
+
+
 
 // Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
 def validate_input_fastq(LinkedHashMap sample) {
@@ -571,22 +589,41 @@ def validate_input_fastq(LinkedHashMap sample) {
     return array
 }
 
-// Function to get list of fasta format samples info [ sample, is_id?, [ fasta ] ]
+
+
+// Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
 def validate_input_fasta(LinkedHashMap sample) {
     def sample_id = sample.sample_id
-    def fastq_1 = sample.fastq_1
-    def fastq_2 = sample.fastq_2
+    def is_id = sample.is_id.toBoolean() 
     def fasta = sample.fasta
 
     def array = []
-    if (!is_sra) {
-            array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
+    if (!is_id) {
+        array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
     } else {
         array = [ sample_id, is_id, [ fasta ] ]
     }
-
     return array
 }
+
+
+
+
+// Function to get list of fasta format samples info [ sample, is_id?, [ fasta ] ]
+///def validate_input_fasta(LinkedHashMap sample) {
+    ///def sample_id = sample.sample_id
+    ///def is_id = sample.is_id.toBoolean()
+    ///def fasta = sample.fasta
+
+    ///def array = []
+    ///if (!is_id) {
+            ///array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
+    ///} else {
+        ///array = [ sample_id, is_id, [ fasta ] ]
+    ///}
+
+    ///return array
+///}
 
 
 /*
@@ -605,9 +642,68 @@ if (params.fastq_samples_format) {
 }
 
 
+
+/////// BORRAR
+process ch_reads_all {
+   publishDir "${params.outdir}/", mode: params.publish_dir_mode
+
+   input:
+   //stdin ch_unicycler_quast
+   stdin ch_reads_all
+
+   output:
+   path "ch_reads_all.txt"
+
+   script:
+   """
+   cat - > ch_reads_all.txt
+   """
+}
+
+
+/////// BORRAR
+process ch_samplesheet_fastq_reformat {
+   publishDir "${params.outdir}/", mode: params.publish_dir_mode
+
+   input:
+   //stdin ch_unicycler_quast
+   stdin ch_samplesheet_fastq_reformat
+
+   output:
+   path "ch_samplesheet_fastq_reformat.txt"
+
+   script:
+   """
+   cat - > ch_samplesheet_fastq_reformat.txt
+   """
+}
+
+
+
+/////// BORRAR
+process ch_samplesheet_fasta_reformat {
+   publishDir "${params.outdir}/", mode: params.publish_dir_mode
+
+   input:
+   //stdin ch_unicycler_quast
+   stdin ch_samplesheet_fasta_reformat
+
+   output:
+   path "ch_samplesheet_fasta_reformat.txt"
+
+   script:
+   """
+   cat - > ch_samplesheet_fasta_reformat.txt
+   """
+}
+
+
+
+
 /*
  * Create channel for input assembly fasta files
  */
+
 
 if (params.fasta_samples_format) {
     ch_samplesheet_fasta_reformat   
@@ -616,36 +712,92 @@ if (params.fasta_samples_format) {
         .into { ch_fasta_gunzip
                 ch_fasta_ncbi } 
 
+    process ch_fasta_ncbi {
+       publishDir "${params.outdir}/", mode: params.publish_dir_mode
+
+       input:
+       //stdin ch_unicycler_quast
+       stdin ch_fasta_ncbi
+
+       output:
+       path "print_ch_fasta_ncbi.txt"
+
+       script:
+       """
+       cat - > print_ch_fasta_ncbi.txt
+       """
+    }
+
+
     ch_fasta_gunzip 
-        .filter { it[2] }
+        .filter { !it[2] }
+       /// .filter { it[2] == false }
         .into { ch_fasta_gunzip_filter }
 
-    process GUNZIP_INPUT_ASSEMBLIES {
-        label 'error_retry'
-        if (params.save_fasta_assemblies) {
-            publishDir "${params.outdir}/fasta_assemblies", mode: params.publish_dir_mode
-        }
+    process ch_fasta_gunzip_filter {
+       publishDir "${params.outdir}/", mode: params.publish_dir_mode
 
-        input:
-        tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
+       input:
+       //stdin ch_unicycler_quast
+       stdin ch_fasta_gunzip_filter
 
-        output:
-        tuple val(sample), path("$unzip") into ch_input_assembly
+       output:
+       path "ch_fasta_gunzip_filter.txt"
 
-        script:
-        unzip = fasta.toString() - '.gz'
-        """
-        if [[ "$fasta" == *.gz ]]; 
-        then
-            pigz -f -d -p $task.cpus $fasta
-        fi
-        """
-        }
+       script:
+       """
+       cat - > ch_fasta_gunzip_filter.txt
+       """
+    }
+
+    
+    ///process GUNZIP_INPUT_ASSEMBLIES {
+        ///label 'error_retry'
+        ///if (params.save_fasta_assemblies) {
+            ///publishDir "${params.outdir}/fasta_assemblies", mode: params.publish_dir_mode
+        ///}
+
+        ///input:
+        ///tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
+
+        ///output:
+        ///tuple val(sample), path("$unzip") into ch_input_assembly
+
+        ///script:
+        ///unzip = fasta.toString() - '.gz'
+        ///"""
+        ///if [[ "$fasta" == *.gz ]]; 
+        ///then
+            ///pigz -f -d -p $task.cpus $fasta
+        ///fi
+        ///"""
+        ///}
+
 } else {
 
     ch_input_assembly = Channel.empty()  
     ch_fasta_ncbi = Channel.empty()  
 }
+
+
+
+/////// BORRAR
+///////process ch_fasta_ncbi {
+   ///////publishDir "${params.outdir}/", mode: params.publish_dir_mode
+
+   ///////input:
+   //stdin ch_unicycler_quast
+   ///////stdin ch_fasta_ncbi
+
+   ///////output:
+   ///////path "print_ch_fasta_ncbi.txt"
+
+   ///////script:
+   ///////"""
+   ///////cat - > print_ch_fasta_ncbi.txt
+   ///////"""
+///////}
+
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -654,51 +806,73 @@ if (params.fasta_samples_format) {
 /*                                                                              */
 //////////////////////////////////////////////////////////////////////////////////
 
+/*
+
 if (!params.skip_ncbi_assembly_download || !isOffline()) {
 
     ch_fasta_ncbi 
-    .filter { it[1] }
+    .filter { it[2] }
     .into { ch_fasta_ncbi_id }
 
-    process NCBI_ASSEMBLY_DOWNLOAD {
+    
+    process print_ch_fasta_ncbi_id {
+       publishDir "${params.outdir}/", mode: params.publish_dir_mode
 
-        tag "$sample"
-        label 'process_medium'
-        label 'error_retry'
-        publishDir "${params.outdir}/assembly/ncbi", mode: params.publish_dir_mode,
-            saveAs : { filename -> params.save_ncbi_assembly_fasta ? filename : null }
+       input:
+       //stdin ch_unicycler_quast
+       stdin ch_fasta_ncbi_id
 
-        input:
-        tuple val(sample), val(is_id), val(fasta) from ch_fasta_ncbi_id
-
-        output:
-        tuple val(sample), path("*.fna") into ch_fasta_ncbi_download
-        path "*.fna"
-
-        script:
-
-        """
-        
-        id_prefix="\${$is_id:0,4}.*"
-        esearch -db assembly -query $is_id \
-            | esummary \
-            | xtract -pattern DocumentSummary -element FtpPath_GenBank \
-            | while read -r url ; do
-                fname=\$(echo \$url | grep -o \$id_prefix | sed 's/\$/_genomic.fna.gz/') ;
-                wget "\$url/\$fname" ;
-            done
-
-        gzip -d *.fna.gz 
-        
-        """
+       output:
+       path "print_ch_fasta_ncbi_id.txt"
+    
+       script:
+       """
+       cat - > print_ch_fasta_ncbi_id.txt
+       """
     }
 
-    ch_input_assembly // CON ESTO ESTOY INTENTANDO UNIR EN EL MISMO CANAL, CH_INPUT_ASSEMBLY, DONDE ESTÁN LOS FASTAS INICIALES (SI ES QUE LOS HAY, SI NO ESTARÍA VACÍO, SI NO FUNCIONA CON UN CANAL VACÍO IGUAL LO TENGO QUE HACER RECURRIENDO AL CANAL DODNE ESTABA FASTA Y NCBI ID MEZCLADOS Y GUARDAR EN LOS PROCESOS TAMBIÉN EL VALOR IS_ID, HACER IGUAL QUE CON LOS FASTQ, VAYA)
+
+     
+    ///process NCBI_ASSEMBLY_DOWNLOAD {
+
+        ///tag "$sample"
+        //label 'process_medium'
+        ///label 'process_low'
+        ///label 'error_retry'
+        ///publishDir "${params.outdir}/assembly/ncbi", mode: params.publish_dir_mode,
+            ///saveAs : { filename -> params.save_ncbi_assembly_fasta ? filename : null }
+
+        ///input:
+        ///tuple val(sample), val(is_id), val(fasta) from ch_fasta_ncbi_id
+
+        ///output:
+        ///tuple val(sample), path("*.fna") into ch_fasta_ncbi_download
+        ///path "*.fna"
+
+        ///script:
+
+        ///"""
+        
+        ///id_prefix="\${$is_id:0,4}.*"
+        ///esearch -db assembly -query $sample \
+            ///| esummary \
+            ///| xtract -pattern DocumentSummary -element FtpPath_GenBank \
+            ///| while read -r url ; do
+                ///file_name=\$(echo \$url | grep -o \$id_prefix | sed 's/\$/_genomic.fna.gz/') ;
+                ///wget "\$url/\$file_name" ;
+            ///done
+
+        ///gzip -d *.fna.gz 
+        
+        ///"""
+    ///}
+    
+    ch_input_assembly // CON ESTO ESTOY INTENTANDO UNIR EN EL MISMO CANAL, CH_INPUT_ASSEMBLY, DONDE ESTÁN LOS FASTAS INICIALES (SI ES QUE LOS HAY, SI NO ESTARÍA VACÍO, SI NO FUNCIONA CON UN CANAL VACÍO IGUAL LO TENGO QUE HACER RECURRIENDO AL CANAL DONDE ESTABA FASTA Y NCBI ID MEZCLADOS Y GUARDAR EN LOS PROCESOS TAMBIÉN EL VALOR IS_ID, HACER IGUAL QUE CON LOS FASTQ)
     .concat(ch_fasta_ncbi_download)
     .set{ ch_input_assembly }
 }
 
-
+*/
 //////////////////////////////////////////////////////////////////////
 /*                                                                  */
 /*                     DOWNLOAD SRA FASTQ FILES                     */
@@ -709,6 +883,7 @@ if (!params.skip_ncbi_assembly_download || !isOffline()) {
  * STEP 1: Download and check SRA data 
  */
 
+/*
 if (!params.skip_sra_download || !isOffline()) { 
     ch_reads_sra 
         .filter { it[2] }
@@ -809,7 +984,7 @@ ch_reads_all
     .map { [ it[0], it[1], it[2].flatten() ] }
     .set { ch_reads_all }
 }
-
+ */
 
 /////////////////////////////////////////////////////////////////////
 /*                                                                 */
@@ -820,6 +995,8 @@ ch_reads_all
 /*
  * STEP 2: Merge FastQ files with the same sample identifier
  */
+
+/*
 
 process CAT_FASTQ {
     tag "$sample"
@@ -863,7 +1040,7 @@ process CAT_FASTQ {
         }
     }
 }
-
+ */
 
 ////////////////////////////////////////////////////////////////////
 /*                                                                */
@@ -875,6 +1052,7 @@ process CAT_FASTQ {
  * STEP 3: FastQC on input reads after merging libraries from the same sample
  */
 
+/*
 process FASTQC {
     tag "$sample"
     //label 'process_medium'
@@ -901,7 +1079,7 @@ process FASTQC {
     
     """
 }
-
+*/
 
 ////////////////////////////////////////////////////////////////////
 /*                                                                */
@@ -913,6 +1091,7 @@ process FASTQC {
  * STEP 4: Fastp adapter trimming and quality filtering
  */
 
+/*
 if (!params.skip_fastp_trimming) {
     process FASTP {
         tag "$sample"
@@ -985,7 +1164,7 @@ if (!params.skip_fastp_trimming) {
     ch_fastp_mqc = Channel.empty()
     ch_fastp_fastqc_mqc = Channel.empty()
 }
-
+*/
 
 ///////////////////////////////////////////////////////////
 /*                                                       */
@@ -997,6 +1176,7 @@ if (!params.skip_fastp_trimming) {
  * STEP 5: De novo assembly with Unicycler
  */
 
+/*
 if (!params.skip_unicycler_assembly ) {
     process UNICYCLER {
         tag "$sample"
@@ -1053,11 +1233,13 @@ if (!params.skip_unicycler_assembly ) {
     }
 }
 
+*/
 
 /*
  * STEP 6: Run Quast on Unicycler de novo assembly
  */
 
+/*
 process QUAST {
     tag "$sample"
     //label 'process_medium'
@@ -1081,7 +1263,7 @@ process QUAST {
     
     output:
     path "quast"
-    path "report.tsv" into ch_quast_mqc
+    path "*_report.tsv" into ch_quast_mqc
 
     script:
     features = params.gff ? "--features $gff" : ""
@@ -1100,7 +1282,7 @@ process QUAST {
     
     """
 }
-
+*/
 
 /////////////////////////////////////////////////////////////////////
 /*                                                                 */
@@ -1285,6 +1467,7 @@ if (!params.skip_taranis_reference_alleles && !params.reference_alleles) {
  * STEP 11: Gene by gene analysis with Taranis
  */
 
+/*
 if (!params.skip_taranis_allele_calling) {
 
     if ( !params.st_profile && params.skip_get_profile ) {
@@ -1343,13 +1526,14 @@ if (!params.skip_taranis_allele_calling) {
     }
 }
 
-
+*/
 
 ///////////////////////////////////////////////////////////////
 /*                                                           */
 /*                          MULTIQC                          */
 /*                                                           */
 ///////////////////////////////////////////////////////////////
+
 
 Channel.from(summary.collect{ [it.key, it.value] })
     .map { k,v -> "<dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }
@@ -1408,6 +1592,8 @@ process get_software_versions {
 /*
  * STEP 12 - MultiQC
  */
+
+/*
 process MULTIQC {
     publishDir "${params.outdir}/MultiQC", mode: params.publish_dir_mode
 
@@ -1428,7 +1614,6 @@ process MULTIQC {
     path "*multiqc_report.html" into ch_multiqc_report
     path "*_data"
     path "multiqc_plots"
-    path "*.tsv"
 
     script:
     rtitle = ''
@@ -1442,7 +1627,7 @@ process MULTIQC {
     multiqc -f $rtitle $rfilename $custom_config_file .
     """
 }
-
+*/
 
 
 /*
