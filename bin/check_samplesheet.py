@@ -40,8 +40,10 @@ def check_samplesheet(FileIn,FileOut):
 
     sampleRunDict = {}
     while True:
+        print("inside while", '\n')
         line = fin.readline()
         if line:
+            print("inside if line", '\n')
             lspl = [x.strip() for x in line.strip().split(',')]
 
             ## Check valid number of columns per row
@@ -54,6 +56,7 @@ def check_samplesheet(FileIn,FileOut):
 
             ## Check sample name entries
             sample,fastQFiles,fastaFile = lspl[0],lspl[1:3],lspl[3]
+            print("fastaFile: ", fastaFile, '\n')
             if sample:
                 if sample.find(' ') != -1:
                     print_error("Sample entry contains spaces!",line)
@@ -104,7 +107,7 @@ def check_samplesheet(FileIn,FileOut):
                         print_error("Samplesheet contains duplicate rows!",line)
                     else:
                         sampleRunDict[sample].append(sample_info)
-
+            
 
             ## Extract sample info (Fasta)
             sample_info = []                                                ## [is_id, fasta]
@@ -120,7 +123,6 @@ def check_samplesheet(FileIn,FileOut):
                         print_error("Samplesheet contains duplicate rows!",line)
                     else:
                         sampleRunDict[sample].append(sample_info)
-
 
         else:
             fin.close()
@@ -160,6 +162,23 @@ def check_samplesheet(FileIn,FileOut):
                 for idx,val in enumerate(sampleRunDict[sample]):
                     fout.write(','.join(["{}_T{}".format(sample,idx+1)] + val) + '\n')
             fout.close()
+
+    else:
+        ## Write validated samplesheet with appropriate columns
+        if len(sampleRunDict) > 0:
+            OutDir = os.path.dirname(FileOut)
+            make_dir(OutDir)
+            fout = open(FileOut,'w')
+            fout.write(','.join(['sample_id', 'is_id', 'fasta']) + '\n')
+            for sample in sorted(sampleRunDict.keys()):
+
+                ## Check that multiple runs of the same sample are of the same datatype
+                ##if not all(x[:2] == sampleRunDict[sample][0][:2] for x in sampleRunDict[sample]):
+                  ##  print_error("Multiple runs of a sample must be of the same datatype","Sample: {}".format(sample))
+
+                for idx,val in enumerate(sampleRunDict[sample]):
+                    fout.write(','.join(["{}_T{}".format(sample,idx+1)] + val) + '\n')
+            fout.close()        
 
 
 def main(args=None):

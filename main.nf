@@ -619,11 +619,9 @@ if (params.fastq_samples_format) {
 }
 
 
-
 /*
  * Create channel for input assembly fasta files
  */
-
 
 if (params.fasta_samples_format) {
     ch_samplesheet_fasta_reformat
@@ -667,12 +665,12 @@ if (params.fasta_samples_format) {
 }
 
 
-
 //////////////////////////////////////////////////////////////////////////////////
 /*                                                                              */
 /*                     DOWNLOAD NCBI ASSEMBLIES FASTA FILES                     */
 /*                                                                              */
 //////////////////////////////////////////////////////////////////////////////////
+
 
 if (!params.skip_ncbi_assembly_download || !isOffline()) {
 
@@ -849,6 +847,7 @@ ch_reads_all
 /*
  * STEP 2: Merge FastQ files with the same sample identifier
  */
+
 
 process CAT_FASTQ {
     tag "$sample"
@@ -1081,7 +1080,6 @@ if (!params.skip_unicycler_assembly ) {
                 ch_samples_taranis_allele_calling }
     }
 }
-
 
 
 /*
@@ -1374,7 +1372,6 @@ if (!params.skip_taranis_allele_calling) {
 }
 
 
-
 ///////////////////////////////////////////////////////////////
 /*                                                           */
 /*                          MULTIQC                          */
@@ -1432,7 +1429,6 @@ process get_software_versions {
 }
 
 
-
 /*
  * STEP 12 - MultiQC
  */
@@ -1470,7 +1466,6 @@ process MULTIQC {
     multiqc -f $rtitle $rfilename $custom_config_file .
     """
 }
-
 
 
 /*
