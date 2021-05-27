@@ -90,32 +90,32 @@ def helpMessage() {
 
     Taranis / Typing / Gene by gene analysis using cgMLST schema
         Analyze schema
-          --remove_subsets [str]                    Remove allele subsequences from the schema. Options: 
+          --remove_subsets [str]                    Remove allele subsequences from the schema. Options:
                                                         'True' - Remove subsets
-                                                        'False' - Do not remove subsets 
+                                                        'False' - Do not remove subsets
                                                         (Default: 'False')
-          --remove_duplicates [str]                 Remove duplicated alleles from the schema. Options: 
+          --remove_duplicates [str]                 Remove duplicated alleles from the schema. Options:
                                                         'True' - Remove duplicates
-                                                        'False' - Do not remove duplicates 
+                                                        'False' - Do not remove duplicates
                                                         (Default: 'False')
-          --remove_nocds [str]                      Remove no CDS alleles from the schema. Options: 
+          --remove_nocds [str]                      Remove no CDS alleles from the schema. Options:
                                                         'True' - Remove no CDS alleles
-                                                        'False' - Do not remove no CDS alleles 
-                                                        (Default: 'False') 
+                                                        'False' - Do not remove no CDS alleles
+                                                        (Default: 'False')
           --new_schema [str]                        Filter a copy of the core genes schema preserving the analysis core genes schema. Options:
                                                     #Create an analysis core genes schema copy for filtering alleles when this option is selected. Options:
                                                         'True' - Create a copy of the core genes schema for filtering
-                                                        'False' - Do not create a copy of the core genes schema for filtering 
-                                                        (Default: 'False')     
+                                                        'False' - Do not create a copy of the core genes schema for filtering
+                                                        (Default: 'False')
           --skip_taranis_analyze_schema [bool]      Skip Taranis schema analysis (Default: true)
 
 
     	Reference Allele(s)
           --evalue_ref [float]                      E-value in BLAST searches (Default: 0.001)
           --perc_identity_ref [int]                 Identity percent in BLAST searches (Default: 90)
-          --reward_ref [int]                        Match reward in BLAST searches (Default: 1)     
-          --penalty_ref [int]                       Mismatch penalty in BLAST searches (Default: -2)  
-          --gap_open_ref [int]                      Gap open penalty in BLAST searches (Default: 1) 
+          --reward_ref [int]                        Match reward in BLAST searches (Default: 1)
+          --penalty_ref [int]                       Mismatch penalty in BLAST searches (Default: -2)
+          --gap_open_ref [int]                      Gap open penalty in BLAST searches (Default: 1)
           --gap_extend_ref [int]                    Gap extension penalty in BLAST searches (Default: 1)
           --num_threads_ref [int]                   num_threads in BLAST searches (Default: 1)
           --skip_taranis_reference_alleles [bool]   Skip Taranis schema analysis (Default: false)
@@ -128,23 +128,23 @@ def helpMessage() {
           --evalue_call [float]                     E-value in BLAST searches (Default: 0.001)
           --perc_identity_ref_call [int]            Identity percentage in BLAST searches using reference alleles for each locus detection in samples (Default: 90)
           --perc_identity_loc_call [int]            Identity percentage in BLAST searches using all alleles in each locus for allele identification in samples (Default: 90)
-          --reward_call [int]                       Match reward in BLAST searches (Default: 1)    
+          --reward_call [int]                       Match reward in BLAST searches (Default: 1)
           --penalty_call [int]                      Mismatch penalty in BLAST searches (Default: -2)
           --gapopen_call [int]                      Gap open penalty in BLAST searches (Default: 1)
           --gapextend_call [int]                    Gap extension penalty in BLAST searches (Default: 1)
           --max_target_seqs_call [int]              max_target_seqs in BLAST searches (Default: 10)
           --max_hsps_call [int]                     max_hsps in BLAST searches (Default: 10)
-          --num_threads_call [int]                  num_threads in BLAST searches (Default: 1)   
+          --num_threads_call [int]                  num_threads in BLAST searches (Default: 1)
           --flanking_nts [int]                      Number of flanking nucleotides to add to each BLAST result obtained after locus detection in sample using reference allele for correct allele identification (Default: 100)
-          --update_schema [str]                     Add INF alleles found for each locus to the core genes schema. Options: 
+          --update_schema [str]                     Add INF alleles found for each locus to the core genes schema. Options:
                                                         'True' - Add INF alleles to the analysis core genes schema
-                                                        'New' - Add INF alleles to a copy of the core genes schema preserving the analysis core genes schema 
+                                                        'New' - Add INF alleles to a copy of the core genes schema preserving the analysis core genes schema
                                                         'False' - Do not update the core gene schema adding new INF alleles found
                                                         (Default: 'True')
 
-          (*st_profile: si es por defecto '' tendría que indicarlo? Tendría que indicarlo en el config con ''? En viralrecon creo que había un caso o dos en los que el por defecto es '', mirar si declara esos params en el config...)                                     
-          /*??????????????? LO CAMBIO POR FALSE EN TARANIS.PY? (Y EN ALLELE CALLING ENTONCES)) 
-          *--st_profile [file]                      ST profile file based on core genes schema file to get ST for each sample (Default: '') 
+          (*st_profile: si es por defecto '' tendría que indicarlo? Tendría que indicarlo en el config con ''? En viralrecon creo que había un caso o dos en los que el por defecto es '', mirar si declara esos params en el config...)
+          /*??????????????? LO CAMBIO POR FALSE EN TARANIS.PY? (Y EN ALLELE CALLING ENTONCES))
+          *--st_profile [file]                      ST profile file based on core genes schema file to get ST for each sample (Default: '')
           --skip_taranis_allele_calling [bool]      Skip Taranis schema analysis (Default: false)
 
 
@@ -186,12 +186,12 @@ if (params.validate_params) {
 
 if (params.input) { ch_input = file(params.input, checkIfExists: true) } else { if (!params.skip_fastqc || !params.skip_fastp || !params.skip_unicycler || !params.skip_quast || !params.skip_taranis_allele_calling) { exit 1, "Cannot carry out the analysis, input samplesheet file not specified!" } }
 
-if (params.schema) { ch_schema = Channel.fromPath( params.schema, type: 'dir', checkIfExists: true ) } else { 
+if (params.schema) { ch_schema = Channel.fromPath( params.schema, type: 'dir', checkIfExists: true ) } else {
     if (params.skip_get_schema && (!params.skip_taranis_analyze_schema || !params.skip_taranis_reference_alleles || !params.skip_taranis_allele_calling)) {
         exit 1, "Schema not specified! To perform Taranis analysis (analyze schema, get reference alleles or allele calling) please provide a valid path to the schema or indicate which schema you desire to download and from which REST API!"
     }
 }
-    
+
 if (!params.fasta && !params.genome && !params.skip_quast) {
     exit 1, "Reference genome not specified! To perform QUAST assemblies analysis please provide a reference genome!"
 }
@@ -281,7 +281,7 @@ if (workflow.revision) summary['Pipeline Release'] = workflow.revision
 summary['Run Name']         = workflow.runName
 summary['Samplesheet']               = params.input
 
-summary['Reference Genome']              = params.genome ?: 'Not supplied' 
+summary['Reference Genome']              = params.genome ?: 'Not supplied'
 if (params.fasta)                    summary['Reference Genome Fasta File'] = params.fasta
 if (params.gff)                      summary['Reference Genome GFF'] = params.gff
 if (params.save_reference)           summary['Save Genome Indices'] = 'Yes'
@@ -330,10 +330,10 @@ if (params.skip_quast)                           summary['Skip Quast'] = 'Yes'
 
 // Analyze schema //
 if (!params.skip_taranis_analyze_schema)  {
-    if (params.remove_subsets)        summary['Remove allele subsequences from schema'] = params.remove_subsets 
+    if (params.remove_subsets)        summary['Remove allele subsequences from schema'] = params.remove_subsets
     if (params.remove_duplicates)     summary['Remove duplicated alleles from schema'] = params.remove_duplicates
     if (params.remove_nocds)          summary['Remove no CDS alleles from schema'] = params.remove_nocds
-    if (params.new_schema)            summary['Filter a schema copy'] = params.new_schema   
+    if (params.new_schema)            summary['Filter a schema copy'] = params.new_schema
 } else {
     summary['Skip Taranis Analyze Schema'] = 'Yes'
 }
@@ -356,7 +356,7 @@ if (!params.skip_taranis_allele_calling)  {
 
     if (params.reference_alleles)        summary['Core genes reference alleles path'] = params.reference_alleles
     if (params.percentlength)            summary['Allowed length percentage to consider INF'] = params.percentlength
-    if (params.coverage)                 summary['Coverage threshold to exclude results'] = params.coverage    
+    if (params.coverage)                 summary['Coverage threshold to exclude results'] = params.coverage
     if (params.evalue_call)              summary['Allele calling BLAST E-value'] = params.evalue_call
     if (params.perc_identity_ref_call)   summary['Allele calling BLAST ID for locus detection'] = params.perc_identity_ref_call
     if (params.perc_identity_loc_call)   summary['Allele calling BLAST ID for allele identification'] = params.perc_identity_loc_call
@@ -409,7 +409,7 @@ checkHostname()
 ///////////////////////////////////////////////////////////////////
 
 /*
- * PREPROCESSING: Uncompress genome fasta file 
+ * PREPROCESSING: Uncompress genome fasta file
  */
 
 if (params.fasta) {
@@ -488,11 +488,11 @@ process CHECK_SAMPLESHEET {
     path samplesheet from ch_input
 
     output:
-    path "samplesheet.valid_fasta.csv" optional true into ch_samplesheet_fasta_reformat 
-    path "samplesheet.valid_fastq.csv" optional true into ch_samplesheet_fastq_reformat                                      
+    path "samplesheet.valid_fasta.csv" optional true into ch_samplesheet_fasta_reformat
+    path "samplesheet.valid_fastq.csv" optional true into ch_samplesheet_fastq_reformat
     path "sra_run_info.tsv" optional true
 
-    script: 
+    script:
     run_sra = !params.skip_sra_download && !isOffline()
     //run_ncbi = !params.skip_ncbi_assembly_download && !isOffline()
 
@@ -500,34 +500,48 @@ process CHECK_SAMPLESHEET {
 
     if $params.fasta_samples_format
     then
-        awk -F, '{if(\$4 != "") {print \$0}}' $samplesheet > nonncbi_id.csv
-        if [ -s nonncbi_id.csv ]
+
+        awk -F, 'NR>1 {if(\$4 != "") {print \$0}}' $samplesheet > nonncbi_id_samples.csv
+        if [ -s nonncbi_id_samples.csv ]
         then
-            check_samplesheet.py -FILE_IN nonncbi_id.csv
+            head -n 1 $samplesheet > nonncbi_id.csv
+            cat nonncbi_id_samples.csv >> nonncbi_id.csv
+            rm nonncbi_id_samples.csv
+            check_samplesheet.py -FILE_IN nonncbi_id.csv -FILE_OUT nonncbi.samplesheet.csv
         fi
 
-        awk -F, '{if(\$1 == GCA* || \$1 == GCF* && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id.list
 
-        if [ -f nonncbi_id.csv ]
+        awk -F, 'NR>1 {if(\$1 ~ /^GCA/ || \$1 ~ /^GCF/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id_samples.csv
+
+        if [ -s ncbi_id_samples.csv ]
         then
-            head -n 1 nonncbi_id.csv > samplesheet.valid_fasta.csv
+            awk -F, 'BEGIN {OFS=","; print "sample_id,is_id,fasta"} {\$2="1";\$3="0";print \$0}' ncbi_id_samples.csv > ncbi.samplesheet.csv
+            rm ncbi_id_samples.csv
+        fi
+
+
+        if [ -f nonncbi.samplesheet.csv ]
+        then
+            head -n 1 nonncbi.samplesheet.csv > samplesheet.valid_fasta.csv
         else
-            head -n 1 ncbi_id.csv > samplesheet.valid_fasta.csv
+            head -n 1 ncbi.samplesheet.csv > samplesheet.valid_fasta.csv
         fi
-        tail -n +2 -q *ncbi_id.csv >> samplesheet.valid_fasta.csv
+        tail -n +2 -q *ncbi.samplesheet.csv >> samplesheet.valid_fasta.csv
 
     fi
 
 
     if $params.fastq_samples_format
     then
-        awk -F, '{if(\$1 != "" && \$2 != "" && \$4 == "" ) {print \$0}}' $samplesheet > nonsra_id.csv
+        awk -F, '{if( \$1 != "" && \$2 != "" && \$4 == "" || \$4 == "fasta") {print \$0}}' $samplesheet > nonsra_id.csv
+
         if [ -s nonsra_id.csv ]
         then
             check_samplesheet.py -FILE_IN nonsra_id.csv -FILE_OUT nonsra.samplesheet.csv
         fi
 
-        awk -F, '{if(\$1 != "" && \$1 != GCA* && \$1 != GCF* && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > sra_id.list
+        awk -F, '{if(\$1 !~ /^GCA/ && \$1 !~ /^GCT/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "" || \$4 == "fasta") {print \$1}}' $samplesheet > sra_id.list
+
         if $run_sra && [ -s sra_id.list ]
         then
             fetch_sra_runinfo.py sra_id.list sra_run_info.tsv --platform ILLUMINA --library_layout SINGLE,PAIRED
@@ -546,16 +560,17 @@ process CHECK_SAMPLESHEET {
     """
 }
 
+
 // Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
 def validate_input_fastq(LinkedHashMap sample) {
     def sample_id = sample.sample_id
     def single_end = sample.single_end.toBoolean()
-    def is_sra = sample.is_sra.toBoolean() 
+    def is_sra = sample.is_sra.toBoolean()
     def is_ftp = sample.is_ftp.toBoolean()
     def fastq_1 = sample.fastq_1
     def fastq_2 = sample.fastq_2
-    def md5_1 = sample.md5_1 
-    def md5_2 = sample.md5_2 
+    def md5_1 = sample.md5_1
+    def md5_2 = sample.md5_2
 
     def array = []
     if (!is_sra) {
@@ -571,20 +586,19 @@ def validate_input_fastq(LinkedHashMap sample) {
     return array
 }
 
-// Function to get list of fasta format samples info [ sample, is_id?, [ fasta ] ]
+
+// Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
 def validate_input_fasta(LinkedHashMap sample) {
     def sample_id = sample.sample_id
-    def fastq_1 = sample.fastq_1
-    def fastq_2 = sample.fastq_2
+    def is_id = sample.is_id.toBoolean()
     def fasta = sample.fasta
 
     def array = []
-    if (!is_sra) {
-            array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
+    if (!is_id) {
+        array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
     } else {
         array = [ sample_id, is_id, [ fasta ] ]
     }
-
     return array
 }
 
@@ -594,31 +608,34 @@ def validate_input_fasta(LinkedHashMap sample) {
  */
 
 if (params.fastq_samples_format) {
-    ch_samplesheet_fastq_reformat 
+    ch_samplesheet_fastq_reformat
         .splitCsv(header:true, sep:',')
         .map { validate_input_fastq(it) }
         .into { ch_reads_all
-                ch_reads_sra } 
+                ch_reads_sra }
 } else {
     ch_reads_all = Channel.empty()
     ch_reads_sra = Channel.empty()
 }
 
 
+
 /*
  * Create channel for input assembly fasta files
  */
 
+
 if (params.fasta_samples_format) {
-    ch_samplesheet_fasta_reformat   
+    ch_samplesheet_fasta_reformat
         .splitCsv(header:true, sep:',')
         .map { validate_input_fasta(it) }
         .into { ch_fasta_gunzip
-                ch_fasta_ncbi } 
+                ch_fasta_ncbi }
 
-    ch_fasta_gunzip 
-        .filter { it[2] }
+    ch_fasta_gunzip
+        .filter{ !it[1] }
         .into { ch_fasta_gunzip_filter }
+
 
     process GUNZIP_INPUT_ASSEMBLIES {
         label 'error_retry'
@@ -627,7 +644,8 @@ if (params.fasta_samples_format) {
         }
 
         input:
-        tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
+        ///tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
+        tuple val(sample), val(is_id), path(fasta) from ch_fasta_gunzip_filter
 
         output:
         tuple val(sample), path("$unzip") into ch_input_assembly
@@ -635,17 +653,19 @@ if (params.fasta_samples_format) {
         script:
         unzip = fasta.toString() - '.gz'
         """
-        if [[ "$fasta" == *.gz ]]; 
+        if [[ "$fasta" == *.gz ]];
         then
             pigz -f -d -p $task.cpus $fasta
         fi
         """
         }
+
 } else {
 
-    ch_input_assembly = Channel.empty()  
-    ch_fasta_ncbi = Channel.empty()  
+    ch_input_assembly = Channel.empty()
+    ch_fasta_ncbi = Channel.empty()
 }
+
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -656,14 +676,16 @@ if (params.fasta_samples_format) {
 
 if (!params.skip_ncbi_assembly_download || !isOffline()) {
 
-    ch_fasta_ncbi 
+    ch_fasta_ncbi
     .filter { it[1] }
     .into { ch_fasta_ncbi_id }
+
 
     process NCBI_ASSEMBLY_DOWNLOAD {
 
         tag "$sample"
-        label 'process_medium'
+        //label 'process_medium'
+        label 'process_low'
         label 'error_retry'
         publishDir "${params.outdir}/assembly/ncbi", mode: params.publish_dir_mode,
             saveAs : { filename -> params.save_ncbi_assembly_fasta ? filename : null }
@@ -678,22 +700,26 @@ if (!params.skip_ncbi_assembly_download || !isOffline()) {
         script:
 
         """
-        
-        id_prefix="\${$is_id:0,4}.*"
-        esearch -db assembly -query $is_id \
+        id=${sample}
+        id_prefix=\${id:0:4}
+
+        if [ \$id_prefix == GCA_ ]; then   database=FtpPath_GenBank; else   database=FtpPath_RefSeq; fi
+
+
+        esearch -db assembly -query \$id \
             | esummary \
-            | xtract -pattern DocumentSummary -element FtpPath_GenBank \
+            | xtract -pattern DocumentSummary -element \$database \
             | while read -r url ; do
-                fname=\$(echo \$url | grep -o \$id_prefix | sed 's/\$/_genomic.fna.gz/') ;
-                wget "\$url/\$fname" ;
+                file_name=\$(echo \$url | grep -o \$id_prefix.* | sed 's/\$/_genomic.fna.gz/') ;
+                wget "\$url/\$file_name" ;
             done
 
-        gzip -d *.fna.gz 
-        
+        gzip -d *.fna.gz
+
         """
     }
 
-    ch_input_assembly // CON ESTO ESTOY INTENTANDO UNIR EN EL MISMO CANAL, CH_INPUT_ASSEMBLY, DONDE ESTÁN LOS FASTAS INICIALES (SI ES QUE LOS HAY, SI NO ESTARÍA VACÍO, SI NO FUNCIONA CON UN CANAL VACÍO IGUAL LO TENGO QUE HACER RECURRIENDO AL CANAL DODNE ESTABA FASTA Y NCBI ID MEZCLADOS Y GUARDAR EN LOS PROCESOS TAMBIÉN EL VALOR IS_ID, HACER IGUAL QUE CON LOS FASTQ, VAYA)
+    ch_input_assembly
     .concat(ch_fasta_ncbi_download)
     .set{ ch_input_assembly }
 }
@@ -706,14 +732,15 @@ if (!params.skip_ncbi_assembly_download || !isOffline()) {
 //////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 1: Download and check SRA data 
+ * STEP 1: Download and check SRA data
  */
 
-if (!params.skip_sra_download || !isOffline()) { 
-    ch_reads_sra 
+if (!params.skip_sra_download || !isOffline()) {
+    ch_reads_sra
         .filter { it[2] }
         .into { ch_reads_sra_ftp
                 ch_reads_sra_dump }
+
 
     process SRA_FASTQ_FTP {
         tag "$sample"
@@ -779,9 +806,9 @@ if (!params.skip_sra_download || !isOffline()) {
         prefix = "${sample.split('_')[0..-2].join('_')}"
         pe = single_end ? "" : "--readids --split-e"
         rm_orphan = single_end ? "" : "[ -f  ${prefix}.fastq.gz ] && rm ${prefix}.fastq.gz"
-        
+
         """
-        
+
         parallel-fastq-dump \\
             --sra-id $prefix \\
             --threads $task.cpus \\
@@ -792,7 +819,7 @@ if (!params.skip_sra_download || !isOffline()) {
             > ${prefix}.fastq_dump.log
 
         $rm_orphan
-        
+
         """
     }
 
@@ -800,7 +827,9 @@ if (!params.skip_sra_download || !isOffline()) {
         .filter { !it[2] }
         .concat(ch_sra_fastq_ftp, ch_sra_fastq_dump)
         .set { ch_reads_all }
+
 }
+
 
 if (params.fastq_samples_format) {
 ch_reads_all
@@ -832,7 +861,7 @@ process CAT_FASTQ {
                                                                        ch_cat_fastp
 
     when:
-    !params.skip_unicycler_assembly 
+    !params.skip_unicycler_assembly
 
     script:
     readList = reads.collect{it.toString()}
@@ -885,7 +914,7 @@ process FASTQC {
                 }
 
     when:
-    !params.skip_fastqc || !params.skip_unicycler_assembly 
+    !params.skip_fastqc || !params.skip_unicycler_assembly
 
     input:
     tuple val(sample), val(single_end), path(reads) from ch_cat_fastqc
@@ -896,9 +925,9 @@ process FASTQC {
     script:
 
     """
-    
+
     fastqc --quiet --threads $task.cpus *.fastq.gz
-    
+
     """
 }
 
@@ -929,7 +958,7 @@ if (!params.skip_fastp_trimming) {
                     }
 
         when:
-        !params.skip_unicycler_assembly 
+        !params.skip_unicycler_assembly
 
         input:
         tuple val(sample), val(single_end), path(reads) from ch_cat_fastp
@@ -944,9 +973,9 @@ if (!params.skip_fastp_trimming) {
         script:
         // Added soft-links to original fastqs for consistent naming in MultiQC
         autodetect = single_end ? "" : "--detect_adapter_for_pe"
-        
+
         """
-        
+
         IN_READS='--in1 ${sample}.fastq.gz'
         OUT_READS='--out1 ${sample}.trim.fastq.gz --failed_out ${sample}.fail.fastq.gz'
         if $single_end; then
@@ -975,7 +1004,7 @@ if (!params.skip_fastp_trimming) {
             2> ${sample}.fastp.log
 
         fastqc --quiet --threads $task.cpus *.trim.fastq.gz
-        
+
         """
     }
 
@@ -1017,9 +1046,9 @@ if (!params.skip_unicycler_assembly ) {
 
         script:
         input_reads = single_end ? "-s $reads" : "-1 ${reads[0]} -2 ${reads[1]}"
-        
+
         """
-        
+
         unicycler \\
             --threads $task.cpus \\
             $input_reads \\
@@ -1027,16 +1056,16 @@ if (!params.skip_unicycler_assembly ) {
         mv assembly.fasta ${sample}.scaffolds.fa
         mv assembly.gfa ${sample}.assembly.gfa
 
-        if [ -s ${sample}.assembly.gfa ] 
+        if [ -s ${sample}.assembly.gfa ]
         then
             Bandage image ${sample}.assembly.gfa ${sample}.assembly.png --height 1000
             Bandage image ${sample}.assembly.gfa ${sample}.assembly.svg --height 1000
         fi
-        
+
         """
     }
 
-    if (params.fasta_samples_format) { 
+    if (params.fasta_samples_format) {
         ch_unicycler_assembly
         .concat(ch_input_assembly)
         .into { ch_samples_quast
@@ -1045,13 +1074,14 @@ if (!params.skip_unicycler_assembly ) {
         ch_unicycler_assembly.into{ ch_samples_quast
                                     ch_samples_taranis_allele_calling }
     }
-} else { 
+} else {
     if (params.fasta_samples_format) {
         ch_input_assembly
         .into { ch_samples_quast
                 ch_samples_taranis_allele_calling }
     }
 }
+
 
 
 /*
@@ -1067,7 +1097,7 @@ process QUAST {
         saveAs: { filename ->
                     if (!filename.endsWith(".tsv")) filename
                 }
-    
+
     when:
     !params.skip_quast
 
@@ -1076,18 +1106,18 @@ process QUAST {
     tuple val(sample), path(scaffolds) from ch_samples_quast
     //path scaffolds from ch_samples_quast
 
-    path fasta from ch_fasta 
-    path gff from ch_gff 
-    
+    path fasta from ch_fasta
+    path gff from ch_gff
+
     output:
     path "quast"
-    path "report.tsv" into ch_quast_mqc
+    path "*_report.tsv" into ch_quast_mqc
 
     script:
     features = params.gff ? "--features $gff" : ""
 
     """
-    
+
     quast.py \\
         --output-dir quast \\
         -r $fasta \\
@@ -1097,7 +1127,7 @@ process QUAST {
 
     mv quast/report.tsv quast/${sample}_report.tsv
     ln -s quast/${sample}_report.tsv
-    
+
     """
 }
 
@@ -1125,7 +1155,7 @@ if ( !params.skip_get_schema && !params.schema ) {
         script:
 
         """
-        
+
         get_files_from_rest_api.py --out api_schema/ \\
                                             no_interactive \\
                                             --api_url $params.api \\
@@ -1133,7 +1163,7 @@ if ( !params.skip_get_schema && !params.schema ) {
                                             --schema_database $params.schema_database \\
                                             --schema_type $params.schema_type \\
                                             --file_type schema
-        
+
         """
     }
 }
@@ -1153,11 +1183,11 @@ if (!params.skip_get_profile) {
 
         output:
         path "api_profile/*.csv" into ch_st_profile
-        
+
         script:
 
         """
-        
+
         get_files_from_rest_api.py --out api_profile/ \\
                                             no_interactive \\
                                             --api_url $params.api \\
@@ -1165,7 +1195,7 @@ if (!params.skip_get_profile) {
                                             --schema_database $params.schema_database \\
                                             --schema_type $params.schema_type \\
                                             --file_type profile
-        
+
         """
     }
 
@@ -1188,7 +1218,7 @@ if (!params.skip_get_profile) {
 if (!params.skip_taranis_analyze_schema) {
 
     ch_schema.into{ ch_schema_taranis_analyze_schema }
-    
+
     process TARANIS_ANALYZE_SCHEMA {
         //label 'process_high'
         label 'process_low'
@@ -1198,7 +1228,7 @@ if (!params.skip_taranis_analyze_schema) {
 
         input:
 
-        path schema from ch_schema_taranis_analyze_schema 
+        path schema from ch_schema_taranis_analyze_schema
 
         output:
 
@@ -1218,11 +1248,11 @@ if (!params.skip_taranis_analyze_schema) {
                                     -removesubsets $params.remove_subsets \\
                                     -removenocds $params.remove_nocds \\
                                     -newschema $params.new_schema \\
-                                    -cpus $task.cpus                               
+                                    -cpus $task.cpus
         """
     }
 
-} else { 
+} else {
     ch_schema
         .into { ch_schema_taranis_reference_alleles
                 ch_schema_taranis_allele_calling }
@@ -1232,7 +1262,7 @@ if (!params.skip_taranis_analyze_schema) {
 if (!params.skip_taranis_analyze_schema && params.newschema) {
     ch_schema_taranis_reference_alleles_cop.into{ ch_schema_taranis_reference_alleles }
     ch_schema_taranis_allele_calling_cop.into{ ch_schema_taranis_allele_calling }
-} 
+}
 
 // si se analiza el esquema y se filtra el esquema original se copia a los canales que se van a usar en allele calling y reference alleles el contenido de los canales orig
 if (!params.skip_taranis_analyze_schema && !params.newschema) {
@@ -1251,18 +1281,18 @@ if (!params.skip_taranis_reference_alleles && !params.reference_alleles) {
         //label 'process_high'
         label 'process_low'
         label 'error_retry'
-    
+
         publishDir "${params.outdir}/taranis", mode: params.publish_dir_mode
 
 
         input:
 
-        path schema from ch_schema_taranis_reference_alleles 
+        path schema from ch_schema_taranis_reference_alleles
 
         output:
 
         path "reference_alleles" into ch_reference_alleles
-        
+
         script:
 
         """
@@ -1308,7 +1338,7 @@ if (!params.skip_taranis_allele_calling) {
 
         output:
         path "allele_calling/"
-        path "allele_calling/result.tsv" into ch_allele_calling_result 
+        path "allele_calling/result.tsv" into ch_allele_calling_result
 
         script:
 
@@ -1337,8 +1367,8 @@ if (!params.skip_taranis_allele_calling) {
                                             -num_threads $params.num_threads_call \\
                                             -flankingnts $params.flanking_nts \\
                                             -updateschema $params.update_schema \\
-                                            -profile $profile 
-        
+                                            -profile $profile
+
         """
     }
 }
@@ -1350,6 +1380,7 @@ if (!params.skip_taranis_allele_calling) {
 /*                          MULTIQC                          */
 /*                                                           */
 ///////////////////////////////////////////////////////////////
+
 
 Channel.from(summary.collect{ [it.key, it.value] })
     .map { k,v -> "<dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }
@@ -1371,7 +1402,7 @@ Channel.from(summary.collect{ [it.key, it.value] })
  * Parse software version numbers
  */
 
-// debería incluir en este proceso las versiones de los programas que utiliza Taranis? (blast, prodigal, prokka, mash)
+// incluir en este proceso las versiones de los programas que utiliza Taranis? (blast, prodigal, prokka, mash)
 
 process get_software_versions {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode,
@@ -1401,13 +1432,11 @@ process get_software_versions {
 }
 
 
-/*
- * STEP 2 - MultiQC
- */
 
 /*
  * STEP 12 - MultiQC
  */
+
 process MULTIQC {
     publishDir "${params.outdir}/MultiQC", mode: params.publish_dir_mode
 
@@ -1428,7 +1457,6 @@ process MULTIQC {
     path "*multiqc_report.html" into ch_multiqc_report
     path "*_data"
     path "multiqc_plots"
-    path "*.tsv"
 
     script:
     rtitle = ''
@@ -1449,7 +1477,6 @@ process MULTIQC {
  * STEP 13 - Output Description HTML
  */
 
-/*
 process output_documentation {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode
 
@@ -1465,7 +1492,7 @@ process output_documentation {
     markdown_to_html.py $output_docs -o results_description.html
     """
 }
-*/
+
 
 /*
  * Completion e-mail notification

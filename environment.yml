@@ -16,6 +16,7 @@ dependencies:
   - bioconda::mash=1.1
   - bioconda::prodigal
   - bioconda::prokka  #(1.12?)
+  - entrez-direct==13.9
 
   - pip:
     - biopython==1.72
@@ -25,4 +26,4 @@ dependencies:
     - plotly
     - numpy
     - requests
-    - entrez-direct==13.9
+

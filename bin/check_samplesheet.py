@@ -32,10 +32,8 @@ def print_error(error,line):
 def check_samplesheet(FileIn,FileOut):
     ## Check header
     HEADER = ['sample', 'fastq_1', 'fastq_2', 'fasta']
-    print("HEADER: ", HEADER, '\n')
     fin = open(FileIn,'r')
     header = fin.readline().strip().split(',')
-    print("header: ", header, '\n')
     if header != HEADER:
         print("ERROR: Please check samplesheet header -> {} != {}".format(','.join(header),','.join(HEADER)))
         sys.exit(1)
@@ -79,7 +77,7 @@ def check_samplesheet(FileIn,FileOut):
                 fasta_extensions = [".fasta", ".fasta.gz", ".fa", ".fa.gz", ".fna", ".fna.gz", ".ffn", ".ffn.gz", ".faa", ".faa.gz", ".frn", ".frn.gz"]
                 is_fasta = False
                 for extension in fasta_extensions:
-                    if fastaFile.endswith(extesion):
+                    if fastaFile.endswith(extension):
                         is_fasta = True
                         break
 
@@ -87,23 +85,43 @@ def check_samplesheet(FileIn,FileOut):
                     print_error("Fasta file, " + fastaFile + " does not have a correct fasta extension: " + fasta_extensions)
 
 
-            ## Auto-detect paired-end/single-end
+            ## Extract sample info (Fastq)
             sample_info = []                                                ## [single_end, is_sra, is_ftp, fastq_1, fastq_2, md5_1, md5_2]
             fastq_1,fastq_2 = fastQFiles
-            if sample and fastq_1 and fastq_2:                              ## Paired-end short reads
-                sample_info = ['0', '0', '0', fastq_1, fastq_2, '', '']
-            elif sample and fastq_1 and not fastq_2:                        ## Single-end short reads
-                sample_info = ['1', '0', '0', fastq_1, fastq_2, '', '']
-            else:
-                print_error("Invalid combination of columns provided!",line)
 
-            if sample not in sampleRunDict:
-                sampleRunDict[sample] = [sample_info]
-            else:
-                if sample_info in sampleRunDict[sample]:
-                    print_error("Samplesheet contains duplicate rows!",line)
+            if fastq_1 or fastq_2: ## DIFF
+                if sample and fastq_1 and fastq_2:                              ## Paired-end short reads
+                    sample_info = ['0', '0', '0', fastq_1, fastq_2, '', '']
+                elif sample and fastq_1 and not fastq_2:                        ## Single-end short reads
+                    sample_info = ['1', '0', '0', fastq_1, fastq_2, '', '']
                 else:
-                    sampleRunDict[sample].append(sample_info)
+                    print_error("Invalid combination of columns provided!",line)
+
+                if sample not in sampleRunDict:
+                    sampleRunDict[sample] = [sample_info]
+                else:
+                    if sample_info in sampleRunDict[sample]:
+                        print_error("Samplesheet contains duplicate rows!",line)
+                    else:
+                        sampleRunDict[sample].append(sample_info)
+
+
+            ## Extract sample info (Fasta)
+            sample_info = []                                                ## [is_id, fasta]
+
+            if fastaFile:
+                if sample and fastaFile:                              ## Paired-end short reads
+                    sample_info = ['0', fastaFile]
+
+                if sample not in sampleRunDict:
+                    sampleRunDict[sample] = [sample_info]
+                else:
+                    if sample_info in sampleRunDict[sample]:
+                        print_error("Samplesheet contains duplicate rows!",line)
+                    else:
+                        sampleRunDict[sample].append(sample_info)
+
+
         else:
             fin.close()
             break
@@ -119,8 +137,25 @@ def check_samplesheet(FileIn,FileOut):
             for sample in sorted(sampleRunDict.keys()):
 
                 ## Check that multiple runs of the same sample are of the same datatype
-                if not all(x[:2] == sampleRunDict[sample][0][:2] for x in sampleRunDict[sample]):
-                    print_error("Multiple runs of a sample must be of the same datatype","Sample: {}".format(sample))
+                ##if not all(x[:2] == sampleRunDict[sample][0][:2] for x in sampleRunDict[sample]):
+                  ##  print_error("Multiple runs of a sample must be of the same datatype","Sample: {}".format(sample))
+
+                for idx,val in enumerate(sampleRunDict[sample]):
+                    fout.write(','.join(["{}_T{}".format(sample,idx+1)] + val) + '\n')
+            fout.close()
+
+    else:
+        ## Write validated samplesheet with appropriate columns
+        if len(sampleRunDict) > 0:
+            OutDir = os.path.dirname(FileOut)
+            make_dir(OutDir)
+            fout = open(FileOut,'w')
+            fout.write(','.join(['sample_id', 'is_id', 'fasta']) + '\n')
+            for sample in sorted(sampleRunDict.keys()):
+
+                ## Check that multiple runs of the same sample are of the same datatype
+                ##if not all(x[:2] == sampleRunDict[sample][0][:2] for x in sampleRunDict[sample]):
+                  ##  print_error("Multiple runs of a sample must be of the same datatype","Sample: {}".format(sample))
 
                 for idx,val in enumerate(sampleRunDict[sample]):
                     fout.write(','.join(["{}_T{}".format(sample,idx+1)] + val) + '\n')
