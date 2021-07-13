@@ -312,9 +312,6 @@
                 "organism_id": {
                     "type": "integer"
                 },
-                "schema_database": {
-                    "type": "integer"
-                },
                 "schema_type": {
                     "type": "string"
                 },
@@ -521,8 +518,43 @@
                     "type": "boolean"
                 }
             }
+        },
+        "taranis_distance_matrix_options": {
+            "title": "Taranis distance matrix options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "alleles_matrix": {
+                    "type": "string"
+                },
+                "locus_missing_threshold": {
+                    "type": "integer",
+                    "default": 100
+                },
+                "sample_missing_threshold": {
+                    "type": "integer",
+                    "default": 100
+                },
+                "paralog_filter": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "lnf_filter": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "plot_filter": {
+                    "type": "booelan",
+                    "default": true
+                },
+                "skip_taranis_distance_matrix": {
+                    "type": "boolean"
+                }
+            }
         }
     },
+
     "allOf": [
         {
             "$ref": "#/definitions/input_options"
