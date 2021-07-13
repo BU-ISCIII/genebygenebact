@@ -42,7 +42,7 @@ def helpMessage() {
 
     Generic arguments
       --input [file]                                Comma-separated file containing information about the samples in the experiment (see docs/usage.md)
-      *--schema [path]                              **Directory where schema files are located *CÓMO INDICAR ESTO, PORQUE COREGENE PUEDE SER EL PATH METIDO DESDE LA TERMINAL O PUEDE QUE SE DESCARGUE EL ESQUEMA DE UNA BASE DE DATOS POR LO QUE HABRÍA QUE INDICAR LOS PARAMS PERTINENTES
+      *--schema [path]                              **Directory where schema files are located
       **-profile [str]                                Configuration profile to use. Can use multiple (comma separated)
                                                     Available: conda, docker, singularity, test, awsbatch, <institute> and more
 
@@ -56,7 +56,6 @@ def helpMessage() {
                                                         'bigsdb'
                                                         'pubMLST'
       --organism_id [int]                           Organism ID whose schema or profile is going to be donwloaded.
-      *--schema_database [int]                      ID for schema database. # NO SÉ SI VOY A MANTENER ESTA VARIABLE???? (ISOLATES Y SEQREF)
       --schema_type [int]                           ID for schema type to download.
       --skip_get_schema [bool]                      Skip schema download (Default: true)
       --skip_get_profile [bool]                     Skip schema ST profile download (Default: true)
@@ -142,9 +141,7 @@ def helpMessage() {
                                                         'False' - Do not update the core gene schema adding new INF alleles found
                                                         (Default: 'True')
 
-          (*st_profile: si es por defecto '' tendría que indicarlo? Tendría que indicarlo en el config con ''? En viralrecon creo que había un caso o dos en los que el por defecto es '', mirar si declara esos params en el config...)
-          /*??????????????? LO CAMBIO POR FALSE EN TARANIS.PY? (Y EN ALLELE CALLING ENTONCES))
-          *--st_profile [file]                      ST profile file based on core genes schema file to get ST for each sample (Default: '')
+          --st_profile [file]                      ST profile file based on core genes schema file to get ST for each sample (Default: '')
           --skip_taranis_allele_calling [bool]      Skip Taranis schema analysis (Default: false)
 
 
@@ -205,12 +202,20 @@ if (!params.fasta && !params.genome && !params.skip_taranis_allele_calling) {
 }
 
 if (params.reference_alleles) { ch_reference_alleles = Channel.fromPath( params.reference_alleles, type: 'dir', checkIfExists: true ) } else {
-    if (params.skip_taranis_reference_alleles && !params.skip_allele_calling) {
+    if (params.skip_taranis_reference_alleles && !params.skip_taranis_allele_calling) {
         exit 1, "Reference alleles not specified! To perform Taranis allele calling analysis please provide a valid path to the schema reference alleles or choose the Taranis reference alleles analysis to get them!"
     }
 }
 
 if (params.st_profile) { ch_st_profile = file( params.st_profile, checkIfExists: true ) }
+
+// distance_matrix
+if (params.alleles_matrix) { ch_allele_calling_matrix = Channel.fromPath( params.alleles_matrix, type: 'file', checkIfExists: true ) } else {
+    if (!params.skip_taranis_distance_matrix && params.skip_taranis_allele_calling) {
+    exit 1, "Allele calling matrix not specified! To perform Taranis distance matrix calculation please provide a valid path to the allele calling matrix file or choose the Taranis allele calling analysis to get it!"
+    }
+}
+
 
 // Check if reference genome exists in the config file
 if (params.genomes && params.genome && !params.genomes.containsKey(params.genome)) {
@@ -476,6 +481,7 @@ if (params.gff) {
 /*                                                             */
 /////////////////////////////////////////////////////////////////
 
+
 process CHECK_SAMPLESHEET {
     tag "$samplesheet"
     publishDir "${params.outdir}/", mode: params.publish_dir_mode,
@@ -488,81 +494,62 @@ process CHECK_SAMPLESHEET {
     path samplesheet from ch_input
 
     output:
-    path "samplesheet.valid_fasta.csv" optional true into ch_samplesheet_fasta_reformat
-    path "samplesheet.valid_fastq.csv" optional true into ch_samplesheet_fastq_reformat
+    path "samplesheet.valid.csv" into ch_samplesheet_reformat
     path "sra_run_info.tsv" optional true
 
     script:
     run_sra = !params.skip_sra_download && !isOffline()
-    //run_ncbi = !params.skip_ncbi_assembly_download && !isOffline()
+    run_ncbi = !params.skip_ncbi_assembly_download && !isOffline()
 
+    //awk -F, 'NR>1 {if(\$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id_samples.csv
     """
 
-    if $params.fasta_samples_format
+    awk -F, '{if((\$1 != "" && \$2 != "" && \$4 == "" || \$4 == "fasta") || (\$4 != "")) {print \$0}}' $samplesheet > non_id.csv
+    if [ -s non_id.csv ]
     then
-
-        awk -F, 'NR>1 {if(\$4 != "") {print \$0}}' $samplesheet > nonncbi_id_samples.csv
-        if [ -s nonncbi_id_samples.csv ]
-        then
-            head -n 1 $samplesheet > nonncbi_id.csv
-            cat nonncbi_id_samples.csv >> nonncbi_id.csv
-            rm nonncbi_id_samples.csv
-            check_samplesheet.py -FILE_IN nonncbi_id.csv -FILE_OUT nonncbi.samplesheet.csv
-        fi
-
-
-        awk -F, 'NR>1 {if(\$1 ~ /^GCA/ || \$1 ~ /^GCF/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id_samples.csv
-
-        if [ -s ncbi_id_samples.csv ]
-        then
-            awk -F, 'BEGIN {OFS=","; print "sample_id,is_id,fasta"} {\$2="1";\$3="0";print \$0}' ncbi_id_samples.csv > ncbi.samplesheet.csv
-            rm ncbi_id_samples.csv
-        fi
-
-
-        if [ -f nonncbi.samplesheet.csv ]
-        then
-            head -n 1 nonncbi.samplesheet.csv > samplesheet.valid_fasta.csv
-        else
-            head -n 1 ncbi.samplesheet.csv > samplesheet.valid_fasta.csv
-        fi
-        tail -n +2 -q *ncbi.samplesheet.csv >> samplesheet.valid_fasta.csv
-
+        check_samplesheet.py -FILE_IN non_id.csv -FILE_OUT non_id.samplesheet.csv
     fi
 
 
-    if $params.fastq_samples_format
+
+    awk -F, 'NR>1 {if(\$1 ~ /^GCA/ || \$1 ~ /^GCF/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > ncbi_id_samples.csv
+
+    if [ -s ncbi_id_samples.csv ]
     then
-        awk -F, '{if( \$1 != "" && \$2 != "" && \$4 == "" || \$4 == "fasta") {print \$0}}' $samplesheet > nonsra_id.csv
-
-        if [ -s nonsra_id.csv ]
-        then
-            check_samplesheet.py -FILE_IN nonsra_id.csv -FILE_OUT nonsra.samplesheet.csv
-        fi
-
-        awk -F, '{if(\$1 !~ /^GCA/ && \$1 !~ /^GCT/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "" || \$4 == "fasta") {print \$1}}' $samplesheet > sra_id.list
-
-        if $run_sra && [ -s sra_id.list ]
-        then
-            fetch_sra_runinfo.py sra_id.list sra_run_info.tsv --platform ILLUMINA --library_layout SINGLE,PAIRED
-            sra_runinfo_to_samplesheet.py sra_run_info.tsv sra.samplesheet.csv
-        fi
-
-        if [ -f nonsra.samplesheet.csv ]
-        then
-            head -n 1 nonsra.samplesheet.csv > samplesheet.valid_fastq.csv
-        else
-            head -n 1 sra.samplesheet.csv > samplesheet.valid_fastq.csv
-        fi
-        tail -n +2 -q *sra.samplesheet.csv >> samplesheet.valid_fastq.csv
+        awk -F, 'BEGIN {OFS=","; print "sample_id,single_end,is_sra,is_ftp,fastq_1,fastq_2,md5_1,md5_2,is_ncbi,is_fasta,fasta"} {\$2="0";\$3="0";\$4="0";\$5="";\$6="";\$7="0";\$8="0";\$9="1";\$10="0";\$11="";print \$0}' ncbi_id_samples.csv > ncbi_id.samplesheet.csv
+        rm ncbi_id_samples.csv
     fi
+
+
+
+    awk -F, '{if(\$1 !~ /^GCA/ && \$1 !~ /^GCF/ && \$1 != "" && \$2 == "" && \$3 == "" && \$4 == "") {print \$1}}' $samplesheet > sra_id.list
+
+    if $run_sra && [ -s sra_id.list ]
+    then
+        fetch_sra_runinfo.py sra_id.list sra_run_info.tsv --platform ILLUMINA --library_layout SINGLE,PAIRED
+        sra_runinfo_to_samplesheet.py sra_run_info.tsv sra_id.samplesheet.csv
+    fi
+
+
+
+    if [ -f non_id.samplesheet.csv ]
+    then
+        head -n 1 non_id.samplesheet.csv > samplesheet.valid.csv
+    else
+        if [ -f ncbi_id.samplesheet.csv ]
+        then
+            head -n 1 ncbi_id.samplesheet.csv > samplesheet.valid.csv
+        else
+            head -n 1 sra_id.samplesheet.csv > samplesheet.valid.csv
+        fi
+    fi
+    tail -n +2 -q *id.samplesheet.csv >> samplesheet.valid.csv
 
     """
 }
 
 
-// Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
-def validate_input_fastq(LinkedHashMap sample) {
+def validate_input(LinkedHashMap sample) {
     def sample_id = sample.sample_id
     def single_end = sample.single_end.toBoolean()
     def is_sra = sample.is_sra.toBoolean()
@@ -571,98 +558,73 @@ def validate_input_fastq(LinkedHashMap sample) {
     def fastq_2 = sample.fastq_2
     def md5_1 = sample.md5_1
     def md5_2 = sample.md5_2
-
-    def array = []
-    if (!is_sra) {
-        if (single_end) {
-            array = [ sample_id, single_end, is_sra, is_ftp, [ file(fastq_1, checkIfExists: true) ] ]
-        } else {
-            array = [ sample_id, single_end, is_sra, is_ftp, [ file(fastq_1, checkIfExists: true), file(fastq_2, checkIfExists: true) ] ]
-        }
-    } else {
-        array = [ sample_id, single_end, is_sra, is_ftp, [ fastq_1, fastq_2 ], [ md5_1, md5_2 ] ]
-    }
-
-    return array
-}
-
-
-// Function to get list of fastq format samples info [ sample, single_end?, is_sra?, is_ftp?, [ fastq_1, fastq_2 ], [ md5_1, md5_2] ]
-def validate_input_fasta(LinkedHashMap sample) {
-    def sample_id = sample.sample_id
-    def is_id = sample.is_id.toBoolean()
+    def is_ncbi = sample.is_ncbi.toBoolean()
+    def is_fasta = sample.is_fasta.toBoolean()
     def fasta = sample.fasta
 
+
     def array = []
-    if (!is_id) {
-        array = [ sample_id, is_id, [ file(fasta, checkIfExists: true) ] ]
+    if (!is_sra && !is_ncbi && !is_fasta) {
+        if (single_end) {
+            array = [ sample_id, single_end, is_sra, is_ftp, [ file(fastq_1, checkIfExists: true) ], is_ncbi, is_fasta, fasta ]
+        } else {
+            array = [ sample_id, single_end, is_sra, is_ftp, [ file(fastq_1, checkIfExists: true), file(fastq_2, checkIfExists: true) ], is_ncbi, is_fasta, fasta ]
+        }
     } else {
-        array = [ sample_id, is_id, [ fasta ] ]
+        array = [ sample_id, single_end, is_sra, is_ftp, [ fastq_1, fastq_2 ], is_ncbi, is_fasta, fasta, [ md5_1, md5_2 ] ]
     }
+
     return array
 }
+
 
 
 /*
  * Create channels for input fastq files
  */
 
-if (params.fastq_samples_format) {
-    ch_samplesheet_fastq_reformat
-        .splitCsv(header:true, sep:',')
-        .map { validate_input_fastq(it) }
-        .into { ch_reads_all
-                ch_reads_sra }
-} else {
-    ch_reads_all = Channel.empty()
-    ch_reads_sra = Channel.empty()
-}
+ch_samplesheet_reformat
+    .splitCsv(header:true, sep:',')
+    .map { validate_input(it) }
+    .into { ch_reads_all
+            ch_reads_sra
+            ch_fasta_gunzip
+            ch_fasta_ncbi }
 
 
 /*
  * Create channel for input assembly fasta files
  */
 
-if (params.fasta_samples_format) {
-    ch_samplesheet_fasta_reformat
-        .splitCsv(header:true, sep:',')
-        .map { validate_input_fasta(it) }
-        .into { ch_fasta_gunzip
-                ch_fasta_ncbi }
-
-    ch_fasta_gunzip
-        .filter{ !it[1] }
-        .into { ch_fasta_gunzip_filter }
+ch_fasta_gunzip
+    .filter{ it[6] }
+    .into { ch_fasta_gunzip_filter }
 
 
-    process GUNZIP_INPUT_ASSEMBLIES {
-        label 'error_retry'
-        if (params.save_fasta_assemblies) {
-            publishDir "${params.outdir}/fasta_assemblies", mode: params.publish_dir_mode
-        }
+process GUNZIP_INPUT_ASSEMBLIES {
+    label 'error_retry'
+    if (params.save_fasta_assemblies) {
+        publishDir "${params.outdir}/fasta_assemblies", mode: params.publish_dir_mode
+    }
 
-        input:
-        ///tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
-        tuple val(sample), val(is_id), path(fasta) from ch_fasta_gunzip_filter
+    input:
+    ///tuple val(sample), path(fasta) from ch_fasta_gunzip_filter
+    ///tuple val(sample), val(is_id), path(fasta) from ch_fasta_gunzip_filter
+    ///tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(is_ncbi), val(is_fasta), file(fasta), val(md5) from ch_fasta_gunzip_filter
+    tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(is_ncbi), val(is_fasta), path(fasta), val(md5) from ch_fasta_gunzip_filter
 
-        output:
-        tuple val(sample), path("$unzip") into ch_input_assembly
+    output:
+    tuple val(sample), path("$unzip") into ch_input_assembly
 
-        script:
-        unzip = fasta.toString() - '.gz'
-        """
-        if [[ "$fasta" == *.gz ]];
-        then
-            pigz -f -d -p $task.cpus $fasta
-        fi
-        """
-        }
-
-} else {
-
-    ch_input_assembly = Channel.empty()
-    ch_fasta_ncbi = Channel.empty()
-}
+    script:
+    unzip = fasta.toString() - '.gz'
+    """
+    if [[ "$fasta" == *.gz ]];
+    then
+        pigz -f -d -p $task.cpus $fasta
+    fi
+    """
+    }
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -671,11 +633,14 @@ if (params.fasta_samples_format) {
 /*                                                                              */
 //////////////////////////////////////////////////////////////////////////////////
 
+/*
+ * STEP 1: Download NCBI data
+ */
 
-if (!params.skip_ncbi_assembly_download || !isOffline()) {
+if (!params.skip_ncbi_assembly_download && !isOffline()) {
 
     ch_fasta_ncbi
-    .filter { it[1] }
+    .filter { it[5] }
     .into { ch_fasta_ncbi_id }
 
 
@@ -689,7 +654,10 @@ if (!params.skip_ncbi_assembly_download || !isOffline()) {
             saveAs : { filename -> params.save_ncbi_assembly_fasta ? filename : null }
 
         input:
-        tuple val(sample), val(is_id), val(fasta) from ch_fasta_ncbi_id
+        //tuple val(sample), val(is_id), val(fasta) from ch_fasta_ncbi_id
+
+        //tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(is_ncbi), val(is_fasta), val(fasta) from ch_fasta_ncbi_id
+        val(sample) from ch_fasta_ncbi_id.map { it[0] }
 
         output:
         tuple val(sample), path("*.fna") into ch_fasta_ncbi_download
@@ -730,15 +698,14 @@ if (!params.skip_ncbi_assembly_download || !isOffline()) {
 //////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 1: Download and check SRA data
+ * STEP 2: Download and check SRA data
  */
 
-if (!params.skip_sra_download || !isOffline()) {
+if (!params.skip_sra_download && !isOffline()) {
     ch_reads_sra
         .filter { it[2] }
         .into { ch_reads_sra_ftp
                 ch_reads_sra_dump }
-
 
     process SRA_FASTQ_FTP {
         tag "$sample"
@@ -754,7 +721,7 @@ if (!params.skip_sra_download || !isOffline()) {
         is_ftp
 
         input:
-        tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(md5) from ch_reads_sra_ftp
+        tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(is_ncbi), val(is_fasta), val(fasta), val(md5) from ch_reads_sra_ftp
 
         output:
         tuple val(sample), val(single_end), val(is_sra), val(is_ftp), path("*.fastq.gz") into ch_sra_fastq_ftp
@@ -825,17 +792,16 @@ if (!params.skip_sra_download || !isOffline()) {
         .filter { !it[2] }
         .concat(ch_sra_fastq_ftp, ch_sra_fastq_dump)
         .set { ch_reads_all }
-
 }
 
 
-if (params.fastq_samples_format) {
 ch_reads_all
+    .filter { !it[5] } //filtrando muestras ncbi para dejar solo fastqs
+    .filter { !it[6] } //filtrando muestras fasta para dejar solo fastqs
     .map { [ it[0].split('_')[0..-2].join('_'), it[1], it[4] ] }
     .groupTuple(by: [0, 1])
     .map { [ it[0], it[1], it[2].flatten() ] }
     .set { ch_reads_all }
-}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -845,15 +811,15 @@ ch_reads_all
 /////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 2: Merge FastQ files with the same sample identifier
+ * STEP 3: Merge FastQ files with the same sample identifier
  */
-
 
 process CAT_FASTQ {
     tag "$sample"
 
     input:
     tuple val(sample), val(single_end), path(reads) from ch_reads_all
+    //tuple val(sample), val(single_end), val(is_sra), val(is_ftp), val(fastq), val(is_ncbi), val(is_fasta), val(fasta) from ch_reads_all
 
     output:
     tuple val(sample), val(single_end), path("*.merged.fastq.gz") into ch_cat_fastqc,
@@ -900,7 +866,7 @@ process CAT_FASTQ {
 ////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 3: FastQC on input reads after merging libraries from the same sample
+ * STEP 4: FastQC on input reads after merging libraries from the same sample
  */
 
 process FASTQC {
@@ -913,9 +879,10 @@ process FASTQC {
                 }
 
     when:
-    !params.skip_fastqc || !params.skip_unicycler_assembly
+    !params.skip_fastqc && !params.skip_unicycler_assembly
 
     input:
+
     tuple val(sample), val(single_end), path(reads) from ch_cat_fastqc
 
     output:
@@ -938,7 +905,7 @@ process FASTQC {
 ////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 4: Fastp adapter trimming and quality filtering
+ * STEP 5: Fastp adapter trimming and quality filtering
  */
 
 if (!params.skip_fastp_trimming) {
@@ -1022,7 +989,7 @@ if (!params.skip_fastp_trimming) {
 ///////////////////////////////////////////////////////////
 
 /*
- * STEP 5: De novo assembly with Unicycler
+ * STEP 6: De novo assembly with Unicycler
  */
 
 if (!params.skip_unicycler_assembly ) {
@@ -1063,27 +1030,20 @@ if (!params.skip_unicycler_assembly ) {
 
         """
     }
-
-    if (params.fasta_samples_format) {
-        ch_unicycler_assembly
+    ch_unicycler_assembly
         .concat(ch_input_assembly)
         .into { ch_samples_quast
                 ch_samples_taranis_allele_calling}
-    } else {
-        ch_unicycler_assembly.into{ ch_samples_quast
-                                    ch_samples_taranis_allele_calling }
-    }
 } else {
-    if (params.fasta_samples_format) {
-        ch_input_assembly
+    ch_input_assembly
         .into { ch_samples_quast
                 ch_samples_taranis_allele_calling }
-    }
 }
 
 
+
 /*
- * STEP 6: Run Quast on Unicycler de novo assembly
+ * STEP 7: Run Quast on de novo assemblies
  */
 
 process QUAST {
@@ -1096,8 +1056,8 @@ process QUAST {
                     if (!filename.endsWith(".tsv")) filename
                 }
 
-    when:
-    !params.skip_quast
+  //  when:
+    //!params.skip_quast
 
     input:
 
@@ -1137,7 +1097,7 @@ process QUAST {
 /////////////////////////////////////////////////////////////////////
 
 /*
- * STEP 7: Donwload specified schema from bigsdb or pubmlst REST-API if not provided
+ * STEP 8: Download specified schema from bigsdb or pubmlst REST-API if not provided
  */
 
 if ( !params.skip_get_schema && !params.schema ) {
@@ -1158,7 +1118,7 @@ if ( !params.skip_get_schema && !params.schema ) {
                                             no_interactive \\
                                             --api_url $params.api \\
                                             --organism_id $params.organism_id \\
-                                            --schema_database $params.schema_database \\
+                                            --schema_database 1 \\
                                             --schema_type $params.schema_type \\
                                             --file_type schema
 
@@ -1168,7 +1128,7 @@ if ( !params.skip_get_schema && !params.schema ) {
 
 
 /*
- * STEP 8: Donwload specified ST profile from bigsdb or pubmlst REST-API if not provided
+ * STEP 9: Donwload specified ST profile from bigsdb or pubmlst REST-API if not provided
  */
 
 if (!params.skip_get_profile) {
@@ -1190,7 +1150,7 @@ if (!params.skip_get_profile) {
                                             no_interactive \\
                                             --api_url $params.api \\
                                             --organism_id $params.organism_id \\
-                                            --schema_database $params.schema_database \\
+                                            --schema_database 1 \\
                                             --schema_type $params.schema_type \\
                                             --file_type profile
 
@@ -1210,7 +1170,7 @@ if (!params.skip_get_profile) {
 /////////////////////////////////////////////////////////////////
 
 /*
- * STEP 9: Analyze Schema with Taranis
+ * STEP 10: Analyze Schema with Taranis
  */
 
 if (!params.skip_taranis_analyze_schema) {
@@ -1269,8 +1229,9 @@ if (!params.skip_taranis_analyze_schema && !params.newschema) {
 }
 
 
+
 /*
- * STEP 10: Get reference allele(s) for each locus in the schema with Taranis
+ * STEP 11: Get reference allele(s) for each locus in the schema with Taranis
  */
 
 if (!params.skip_taranis_reference_alleles && !params.reference_alleles) {
@@ -1310,7 +1271,7 @@ if (!params.skip_taranis_reference_alleles && !params.reference_alleles) {
 
 
 /*
- * STEP 11: Gene by gene analysis with Taranis
+ * STEP 12: Gene by gene analysis with Taranis
  */
 
 if (!params.skip_taranis_allele_calling) {
@@ -1329,14 +1290,15 @@ if (!params.skip_taranis_allele_calling) {
         input:
 
         path fasta from ch_fasta
-        tuple val(samples), path(samples_path) from ch_samples_taranis_allele_calling.collect()
+        //tuple val(samples), path(samples_path) from ch_samples_taranis_allele_calling.collect()
+        path(samples_path) from ch_samples_taranis_allele_calling.map { it[1] }.collect()
         path schema from ch_schema_taranis_allele_calling
         path reference_alleles from ch_reference_alleles
         val profile from ch_st_profile
 
         output:
         path "allele_calling/"
-        path "allele_calling/result.tsv" into ch_allele_calling_result
+        path "allele_calling/result.tsv" into ch_allele_calling_matrix
 
         script:
 
@@ -1372,12 +1334,48 @@ if (!params.skip_taranis_allele_calling) {
 }
 
 
+/*
+ * STEP 13: Get distance matrix with Taranis
+ */
+
+if (!params.skip_taranis_distance_matrix) {
+
+    process TARANIS_DISTANCE_MATRIX {
+        //label 'process_high'
+        label 'process_low'
+        label 'error_retry'
+
+        publishDir "${params.outdir}/taranis", mode: params.publish_dir_mode
+
+        input:
+        path alleles_matrix from ch_allele_calling_matrix
+
+        output:
+        path "distance_matrix/"
+
+        script:
+
+        """
+
+        taranis.py distance_matrix -alleles_matrix $alleles_matrix \\
+                                            -locus_missing_threshold $params.locus_missing_threshold \\
+                                            -sample_missing_threshold $params.sample_missing_threshold \\
+                                            -paralog_filter $params.paralog_filter \\
+                                            -lnf_filter $params.lnf_filter \\
+                                            -plot_filter $params.plot_filter \\
+                                            -outputdir distance_matrix
+
+        """
+    }
+}
+
+
+
 ///////////////////////////////////////////////////////////////
 /*                                                           */
 /*                          MULTIQC                          */
 /*                                                           */
 ///////////////////////////////////////////////////////////////
-
 
 Channel.from(summary.collect{ [it.key, it.value] })
     .map { k,v -> "<dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }
@@ -1399,7 +1397,7 @@ Channel.from(summary.collect{ [it.key, it.value] })
  * Parse software version numbers
  */
 
-// incluir en este proceso las versiones de los programas que utiliza Taranis? (blast, prodigal, prokka, mash)
+//******añadir Taranis******//
 
 process get_software_versions {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode,
@@ -1430,7 +1428,7 @@ process get_software_versions {
 
 
 /*
- * STEP 12 - MultiQC
+ * STEP 13 - MultiQC
  */
 
 process MULTIQC {
@@ -1469,7 +1467,7 @@ process MULTIQC {
 
 
 /*
- * STEP 13 - Output Description HTML
+ * STEP 14 - Output Description HTML
  */
 
 process output_documentation {
