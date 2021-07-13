@@ -35,9 +35,6 @@ def helpMessage() {
 
     The typical command for running the pipeline is as follows:
 
-    CAMBIAR: -------------------> nextflow run nf-core/viralrecon --input samplesheet.csv --genome 'MN908947.3' -profile docker
-    nextflow run nfcore_taranispip/nf-core-taranispip_mod/main.nf --input taranispip_pruebas/samplesheet_prueba_taranispip.csv --fasta Listeria_proyecto/references/GCF_002213505.1_ASM221350v1_genomic.fna --gff Listeria_proyecto/references/GCF_002213505.1_ASM221350v1_genomic.gff --skip_taranis_allele_calling true --skip_taranis_reference_alleles true --skip_taranis_analyze_schema true --outdir prueba_taranis_pipeline_resultados --skip_multiqc true
-    nextflow run nfcore_taranispip/nf-core-taranispip_mod/main.nf --input taranispip_pruebas/samplesheet_prueba_taranispip.csv --fasta_samples_format false --fastq_samples_format true skip_sra_download true --fasta Listeria_proyecto/references/GCF_002213505.1_ASM221350v1_genomic.fna --gff Listeria_proyecto/references/GCF_002213505.1_ASM221350v1_genomic.gff --skip_taranis_allele_calling true --skip_taranis_reference_alleles true --skip_taranis_analyze_schema true --outdir prueba_taranis_pipeline_resultados --skip_multiqc true
 
 
     Generic arguments
@@ -209,7 +206,6 @@ if (params.reference_alleles) { ch_reference_alleles = Channel.fromPath( params.
 
 if (params.st_profile) { ch_st_profile = file( params.st_profile, checkIfExists: true ) }
 
-// distance_matrix
 if (params.alleles_matrix) { ch_allele_calling_matrix = Channel.fromPath( params.alleles_matrix, type: 'file', checkIfExists: true ) } else {
     if (!params.skip_taranis_distance_matrix && params.skip_taranis_allele_calling) {
     exit 1, "Allele calling matrix not specified! To perform Taranis distance matrix calculation please provide a valid path to the allele calling matrix file or choose the Taranis allele calling analysis to get it!"
