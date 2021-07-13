@@ -43,10 +43,10 @@ def sra_runinfo_to_samplesheet(FileIn,FileOut):
             sample_info = []          ## [single_end, is_sra, is_ftp, fastq_1, fastq_2, md5_1, md5_2]
             if library == 'SINGLE':
                 if fastq_files:
-                    sample_info = ['1', '1', '1', fastq_files , '', fastq_md5, '']
+                    sample_info = ['1', '1', '1', fastq_files , '', fastq_md5, '', '0', '0', '']
                 else:
                     db_id = run_id
-                    sample_info = ['1', '1', '0', '', '', '', '']
+                    sample_info = ['1', '1', '0', '', '', '', '', '0', '0', '']
             elif library == 'PAIRED':
                 if fastq_files:
                     fq_files = fastq_files.split(';')[-2:]
@@ -56,7 +56,7 @@ def sra_runinfo_to_samplesheet(FileIn,FileOut):
                         print("Invalid FastQ files found for database id:'{}'!.".format(run_id))
                 else:
                     db_id = run_id
-                    sample_info = ['0', '1', '0', '', '', '', '']
+                    sample_info = ['0', '1', '0', '', '', '', '', '0', '0', '']
 
             if sample_info:
                 if db_id not in sampleRunDict:
@@ -75,7 +75,7 @@ def sra_runinfo_to_samplesheet(FileIn,FileOut):
         OutDir = os.path.dirname(FileOut)
         make_dir(OutDir)
         fout = open(FileOut,'w')
-        fout.write(','.join(['sample_id', 'single_end', 'is_sra', 'is_ftp', 'fastq_1', 'fastq_2', 'md5_1', 'md5_2']) + '\n')
+        fout.write(','.join(['sample_id', 'single_end', 'is_sra', 'is_ftp', 'fastq_1', 'fastq_2', 'md5_1', 'md5_2', 'is_ncbi', 'is_fasta', 'fasta']) + '\n')
         for db_id in sorted(sampleRunDict.keys()):
             for idx,val in enumerate(sampleRunDict[db_id]):
                 fout.write(','.join(["{}_T{}".format(db_id,idx+1)] + val) + '\n')
