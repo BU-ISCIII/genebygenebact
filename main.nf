@@ -1393,8 +1393,6 @@ Channel.from(summary.collect{ [it.key, it.value] })
  * Parse software version numbers
  */
 
-//******añadir Taranis******//
-
 process get_software_versions {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode,
         saveAs: { filename ->
@@ -1416,6 +1414,7 @@ process get_software_versions {
     unicycler --version > v_unicycler.txt
     Bandage --version > v_bandage.txt
     quast --version > v_quast.txt
+    taranis.py --version > v_taranis.txt
     multiqc --version > v_multiqc.txt
     scrape_software_versions.py &> software_versions_mqc.yaml
     """
